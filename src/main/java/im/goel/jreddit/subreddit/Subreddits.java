@@ -1,8 +1,8 @@
 package im.goel.jreddit.subreddit;
 
-
 import im.goel.jreddit.user.User;
 import im.goel.jreddit.utils.Utils;
+import java.io.IOException;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 
 /**
  * Lists all subreddits.
@@ -80,14 +81,38 @@ public class Subreddits {
 
             subreddits = initList((JSONArray) data.get("children"));
 
-            for(Subreddit sub : subreddits) {
-                if(sub.getDisplayName().equalsIgnoreCase(subName))
+            for (Subreddit sub : subreddits) {
+                if (sub.getDisplayName().equalsIgnoreCase(subName)) {
                     return sub;
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
+    }
+
+    /*
+     * Gathers information about a subreddit without requiring a connected user.
+     * 
+     * @param subName The name of the subreddit that needs to be accessed.
+     * @return The subreddit if it exist, null if it doesn't.
+     * @author Kevin Poitra
+     */
+    public static Subreddit getSubredditByName(String subName) {
+        try {
+            JSONObject object = (JSONObject) Utils.get("", new URL("http://www.reddit.com/r/" + subName + "/about.json"), null);
+            Subreddit sub = initSubreddit(object);
+            return sub;
+        } catch (ParseException e) {
+            // TODO: I'm only getting this error if and only if the subreddit truly doesn't exist (ex: "programming1234") since it doesn't return a JSON object. Are there any other cases where this can be thrown for an
+            // existing subreddit?
+            System.out.println("That subreddit doesn't exist!");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
         return null;
     }
 
@@ -107,20 +132,25 @@ public class Subreddits {
         // Iterate through the available subreddits
         for (int i = 0; i < children.size(); i++) {
             obj = (JSONObject) children.get(i);
-            obj = (JSONObject) obj.get("data");
-            r = new Subreddit();
-            r.setCreated(obj.get("created").toString());
-            r.setCreatedUTC(obj.get("created_utc").toString());
-            r.setDescription(obj.get("description").toString());
-            r.setDisplayName(obj.get("display_name").toString());
-            r.setId(obj.get("id").toString());
-            r.setName(obj.get("display_name").toString());
-            r.setNsfw(Boolean.parseBoolean(obj.get("over18").toString()));
-            r.setSubscribers(Integer.parseInt(obj.get("subscribers").toString()));
-            r.setTitle(obj.get("title").toString());
-            r.setUrl(obj.get("url").toString());
+            r = initSubreddit(obj);
             subreddits.add(r);
         }
         return subreddits;
+    }
+
+    private static Subreddit initSubreddit(JSONObject obj) {
+        obj = (JSONObject) obj.get("data");
+        Subreddit r = new Subreddit();
+        r.setCreated(obj.get("created").toString());
+        r.setCreatedUTC(obj.get("created_utc").toString());
+        r.setDescription(obj.get("description").toString());
+        r.setDisplayName(obj.get("display_name").toString());
+        r.setId(obj.get("id").toString());
+        r.setName(obj.get("display_name").toString());
+        r.setNsfw(Boolean.parseBoolean(obj.get("over18").toString()));
+        r.setSubscribers(Integer.parseInt(obj.get("subscribers").toString()));
+        r.setTitle(obj.get("title").toString());
+        r.setUrl(obj.get("url").toString());
+        return r;
     }
 }
